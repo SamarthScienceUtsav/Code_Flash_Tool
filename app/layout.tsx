@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   title: "Flash Code Uploader | Science Utsav",
   description: "Upload precompiled Arduino Uno, ESP32, and ESP32-CAM firmware.",
   icons: {
-    icon: "/science-utsav-logo.png",
-    shortcut: "/science-utsav-logo.png",
+    icon: "./science-utsav-logo.png",
+    shortcut: "./science-utsav-logo.png",
   },
 };
 

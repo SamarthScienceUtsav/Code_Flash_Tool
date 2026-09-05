@@ -40,13 +40,16 @@ function run(args, command=CLI) {
   });
 }
 function reply(res, status, value) {
-  res.writeHead(status, { "content-type":"application/json", "access-control-allow-origin":"http://localhost:3000", "access-control-allow-headers":"content-type", "access-control-allow-methods":"GET,POST,OPTIONS" }); res.end(JSON.stringify(value));
+  res.writeHead(status, { "content-type":"application/json", "access-control-allow-headers":"content-type", "access-control-allow-methods":"GET,POST,OPTIONS" }); res.end(JSON.stringify(value));
 }
 async function readJson(req) {
   let body=""; for await (const chunk of req) { body+=chunk; if(body.length>32_000_000) throw new Error("Build is larger than 24 MB."); } return JSON.parse(body);
 }
 
 createServer(async (req,res)=>{
+  const allowedOrigins = new Set(["http://localhost:3000", "http://127.0.0.1:3000", "https://samarthscienceutsav.github.io"]);
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.has(origin)) res.setHeader("access-control-allow-origin", origin);
   if(req.method==="OPTIONS") return reply(res,204,{});
   try {
     if(req.method==="GET"&&req.url==="/health") return reply(res,200,{ok:true,version:4,mode:"precompiled"});
@@ -60,7 +63,7 @@ createServer(async (req,res)=>{
       const download=await fetch(`https://drive.google.com/uc?export=download&id=${file.id}`);
       if(!download.ok) throw new Error(`Google Drive download failed (${download.status}).`);
       const bytes=Buffer.from(await download.arrayBuffer());
-      res.writeHead(200,{"content-type":"application/octet-stream","content-length":bytes.length,"content-disposition":`attachment; filename="${file.name}"`,"access-control-allow-origin":"http://localhost:3000"});
+      res.writeHead(200,{"content-type":"application/octet-stream","content-length":bytes.length,"content-disposition":`attachment; filename="${file.name}"`});
       return res.end(bytes);
     }
     if(req.method==="GET"&&req.url==="/ports") {

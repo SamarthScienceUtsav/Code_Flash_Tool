@@ -20,3 +20,9 @@ npm run dev
 ```
 
 Open http://localhost:3000, select the board and COM port, add the compiled firmware, and click **Flash firmware**.
+
+## GitHub Pages
+
+The interface is deployed to https://samarthscienceutsav.github.io/Code_Flash_Tool/ by the GitHub Actions workflow on every push to `main`.
+
+Hardware flashing still requires the local bridge. Run `npm run dev`, then open either the local or hosted interface. Keep the terminal open while flashing.
