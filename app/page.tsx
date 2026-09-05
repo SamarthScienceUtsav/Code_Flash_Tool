@@ -2,20 +2,15 @@
 
 import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
 import type { ESPLoader as ESPLoaderType, Transport as TransportType } from "esptool-js";
+import { driveFiles } from "./drive-files.generated";
 
 type BoardId = "esp32" | "cam" | "uno";
-type DriveFile = { id: string; name: string; size: number };
 
 const boards = {
   esp32: { name: "ESP32", note: "DevKit / WROOM", ext: ".bin", mark: "32" },
   cam: { name: "ESP32-CAM", note: "AI Thinker", ext: ".bin", mark: "CAM" },
   uno: { name: "Arduino Uno", note: "Local uploader required", ext: ".hex", mark: "UNO" },
 } as const;
-
-const driveFiles: DriveFile[] = [
-  { id: "1QsdnUgXAoQMDE6DkOp3Aeu5s6ZCOugeg", name: "04_Army_Radar_Watch_Tower.ino.hex", size: 14352 },
-  { id: "13U4iTySE3vZCrouGL_5uQxabsFCWi77Y", name: "Ai_Doodle_controlled_Car.ino.bin", size: 0 },
-];
 
 function flashAddress(file: File, fileCount: number) {
   const name = file.name.toLowerCase();
