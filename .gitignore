@@ -41,6 +41,7 @@ app.err.log
 next-env.d.ts
 *.tsbuildinfo
 /dist/
+/public/firmware/
 /.wrangler/
 /outputs/
 /work/

@@ -26,6 +26,7 @@ export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
   const [connected, setConnected] = useState(false);
   const [driveId, setDriveId] = useState("");
+  const [driveBusy, setDriveBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState(["Browser flasher is ready.", "Use Chrome or Edge and connect your board."]);
@@ -69,12 +70,12 @@ export default function Home() {
       const { ESPLoader, Transport } = await import("esptool-js");
       const port = await navigator.serial.requestPort();
       const transport = new Transport(port, true);
-      const terminal = { clean() {}, write: (data: string) => log(data.trim()), writeLine: (data: string) => log(data.trim()) };
-      const loader = new ESPLoader({ transport, baudrate: 115200, terminal, debugLogging: false });
-      const chip = await loader.main();
       portRef.current = port;
       transportRef.current = transport;
+      const terminal = { clean() {}, write: (data: string) => log(data.trim()), writeLine: (data: string) => log(data.trim()) };
+      const loader = new ESPLoader({ transport, baudrate: 115200, terminal, debugLogging: false });
       loaderRef.current = loader;
+      const chip = await loader.main();
       setConnected(true);
       log(`Connected to ${chip}.`);
     } catch (error) {
@@ -83,11 +84,21 @@ export default function Home() {
     } finally { setBusy(false); }
   }
 
-  function downloadDriveFile() {
+  async function chooseDriveFile() {
     const selected = driveFiles.find(file => file.id === driveId);
     if (!selected) return;
-    window.open(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(selected.id)}`, "_blank", "noopener,noreferrer");
-    log(`Downloading ${selected.name}. Select it above after the download finishes.`);
+    try {
+      setDriveBusy(true);
+      log(`Loading ${selected.name}…`);
+      const response = await fetch(`${import.meta.env.BASE_URL}${selected.path}`);
+      if (!response.ok) throw new Error(`Firmware request failed (${response.status}).`);
+      const firmware = new File([await response.blob()], selected.name, { type: "application/octet-stream" });
+      setFiles([firmware]);
+      setProgress(0);
+      log(`Loaded ${selected.name}.`);
+    } catch (error) {
+      log(`Drive firmware failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally { setDriveBusy(false); }
   }
 
   async function upload() {
@@ -128,7 +139,7 @@ export default function Home() {
     <section className="workflowIntro"><div><span>WEB SERIAL FLASHER</span><h1>Flash your board with confidence.</h1><p>No application install required. Use Chrome or Edge and connect over USB.</p></div><ol><li className="done"><b>1</b> Board</li><li className={files.length ? "done" : ""}><b>2</b> Firmware</li><li className={connected ? "done" : ""}><b>3</b> Device</li></ol></section>
     <section className="workspace">
       <div className="panel boardPanel"><div className="panelHead"><span>01</span><div><h2>Choose your board</h2><p>Pick the hardware connected via USB</p></div></div><div className="boardGrid">{(Object.keys(boards) as BoardId[]).map(id => <button key={id} onClick={() => selectBoard(id)} className={`board ${board === id ? "selected" : ""}`}><div className="chipMark">{boards[id].mark}</div><strong>{boards[id].name}</strong><small>{boards[id].note}</small><span className="check">✓</span></button>)}</div><div className="tip"><b>USB TIP</b><span>Use a data-capable cable. Web Serial works in desktop Chrome and Edge.</span></div></div>
-      <div className="panel uploadPanel"><div className="panelHead"><span>02</span><div><h2>Add compiled firmware</h2><p>{board === "uno" ? "Choose the Arduino .hex file" : "Choose the complete ESP .bin build folder"}</p></div></div><label className={`drop ${files.length ? "hasFiles" : ""}`} onDragOver={event => event.preventDefault()} onDrop={(event: DragEvent) => { event.preventDefault(); chooseFiles(event.dataTransfer.files); }}><input type="file" multiple={board !== "uno"} accept={info.ext} onChange={(event: ChangeEvent<HTMLInputElement>) => chooseFiles(event.target.files)} /><div className="uploadIcon">↑</div>{files.length ? <><strong>{files.length} file{files.length === 1 ? "" : "s"} ready</strong><span>{files.map(file => file.name).join(" · ")}</span></> : <><strong>Drop firmware here</strong><span>or click to browse · {info.ext} · max 24 MB</span></>}<button type="button">CHOOSE FILE{board === "uno" ? "" : "S"}</button></label>{board !== "uno" && <label className="folderPick"><input type="file" multiple {...({ webkitdirectory: "" } as object)} onChange={(event: ChangeEvent<HTMLInputElement>) => chooseFiles(event.target.files)} /><span>□</span> Select compiled build folder <b>Finds .bin files →</b></label>}<div className="drivePick"><span className="driveLabel">OR DOWNLOAD FROM GOOGLE DRIVE</span><div><select aria-label="Google Drive firmware" value={driveId} onChange={event => setDriveId(event.target.value)}><option value="">Choose {info.ext} firmware</option>{driveFiles.filter(item => item.name.toLowerCase().endsWith(info.ext)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" disabled={!driveId} onClick={downloadDriveFile}>DOWNLOAD</button></div><a href="https://drive.google.com/drive/folders/12w02nJfTBFPVHQIK7ImZ8iMsDpza86Y-" target="_blank" rel="noreferrer">Open firmware folder ↗</a></div></div>
+      <div className="panel uploadPanel"><div className="panelHead"><span>02</span><div><h2>Add compiled firmware</h2><p>{board === "uno" ? "Choose the Arduino .hex file" : "Choose the complete ESP .bin build folder"}</p></div></div><label className={`drop ${files.length ? "hasFiles" : ""}`} onDragOver={event => event.preventDefault()} onDrop={(event: DragEvent) => { event.preventDefault(); chooseFiles(event.dataTransfer.files); }}><input type="file" multiple={board !== "uno"} accept={info.ext} onChange={(event: ChangeEvent<HTMLInputElement>) => chooseFiles(event.target.files)} /><div className="uploadIcon">↑</div>{files.length ? <><strong>{files.length} file{files.length === 1 ? "" : "s"} ready</strong><span>{files.map(file => file.name).join(" · ")}</span></> : <><strong>Drop firmware here</strong><span>or click to browse · {info.ext} · max 24 MB</span></>}<button type="button">CHOOSE FILE{board === "uno" ? "" : "S"}</button></label>{board !== "uno" && <label className="folderPick"><input type="file" multiple {...({ webkitdirectory: "" } as object)} onChange={(event: ChangeEvent<HTMLInputElement>) => chooseFiles(event.target.files)} /><span>□</span> Select compiled build folder <b>Finds .bin files →</b></label>}<div className="drivePick"><span className="driveLabel">OR SELECT FROM GOOGLE DRIVE</span><div><select aria-label="Google Drive firmware" value={driveId} onChange={event => setDriveId(event.target.value)}><option value="">Choose {info.ext} firmware</option>{driveFiles.filter(item => item.name.toLowerCase().endsWith(info.ext)).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" disabled={!driveId || driveBusy} onClick={chooseDriveFile}>{driveBusy ? "LOADING…" : "USE FILE"}</button></div><a href="https://drive.google.com/drive/folders/12w02nJfTBFPVHQIK7ImZ8iMsDpza86Y-" target="_blank" rel="noreferrer">Open firmware folder ↗</a></div></div>
       <aside className="panel flashPanel"><div className="panelHead"><span>03</span><div><h2>Flash device</h2><p>Connect with Web Serial and start upload</p></div></div><div className="summary"><div><span>BOARD</span><b>{info.name}</b></div><div><span>FIRMWARE</span><b>{files.length ? `${files.length} file · ${(size / 1024).toFixed(1)} KB` : "Not selected"}</b></div><div><span>FORMAT</span><b>{info.ext}</b></div></div><label className="controlLabel">USB DEVICE</label><div className="portRow"><button type="button" disabled={busy || board === "uno"} onClick={connected ? disconnect : connectDevice}>{connected ? "DISCONNECT" : "CONNECT DEVICE"}</button></div><div className="readyState"><span className={files.length ? "ready" : ""}>{files.length ? "✓ Firmware ready" : "○ Add firmware"}</span><span className={connected ? "ready" : ""}>{connected ? "✓ Device connected" : "○ Connect device"}</span></div><button className="flashBtn" disabled={busy || !files.length || !connected || board === "uno"} onClick={upload}>{board === "uno" ? "UNO REQUIRES LOCAL UPLOADER" : busy ? "WORKING…" : !files.length ? "ADD FIRMWARE TO CONTINUE" : !connected ? "CONNECT DEVICE TO CONTINUE" : "FLASH FIRMWARE →"}</button><div className="progress"><i style={{ width: `${progress}%` }} /></div><div className="connection"><i className={connected ? "on" : ""} />{progress === 100 ? "UPLOAD COMPLETE" : connected ? "DEVICE CONNECTED" : "WAITING FOR DEVICE"}<span>{progress}%</span></div><div className="console">{logs.slice(-4).map((entry, index) => <p key={index}><span>›</span>{entry}</p>)}</div></aside>
     </section>
     <section id="guide" className="guide"><p>QUICK START</p><h2>Three steps. One minute.</h2><div><article><span>1</span><b>Select board</b><p>Use ESP32 or ESP32-CAM in Chrome or Edge.</p></article><article><span>2</span><b>Add compiled build</b><p>Select every .bin file from the Arduino build folder.</p></article><article><span>3</span><b>Connect & flash</b><p>Choose the USB serial device and keep it connected.</p></article></div></section>

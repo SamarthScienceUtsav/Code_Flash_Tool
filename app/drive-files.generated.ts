@@ -3,16 +3,19 @@ export const driveFiles = [
   {
     "id": "1QsdnUgXAoQMDE6DkOp3Aeu5s6ZCOugeg",
     "name": "04_Army_Radar_Watch_Tower.ino.hex",
-    "size": 0
+    "size": 0,
+    "path": "firmware/1QsdnUgXAoQMDE6DkOp3Aeu5s6ZCOugeg.hex"
   },
   {
     "id": "13U4iTySE3vZCrouGL_5uQxabsFCWi77Y",
     "name": "Ai_Doodle_controlled_Car.ino.bin",
-    "size": 0
+    "size": 0,
+    "path": "firmware/13U4iTySE3vZCrouGL_5uQxabsFCWi77Y.bin"
   },
   {
     "id": "1HlCoCwo4S7AnELDut_hW9p0n9LMXIqWM",
     "name": "Hellllooooo.ino.bin",
-    "size": 0
+    "size": 0,
+    "path": "firmware/1HlCoCwo4S7AnELDut_hW9p0n9LMXIqWM.bin"
   }
 ] as const;
